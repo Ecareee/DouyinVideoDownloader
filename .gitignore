@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+downloads/
+artifacts/
+.idea/
+packages/api/prisma/generated/
+packages/api/prisma/migrations/

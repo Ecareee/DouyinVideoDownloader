@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" name="viewport"/>
+    <meta content="#1677ff" media="(prefers-color-scheme: light)" name="theme-color"/>
+    <meta content="#1f1f1f" media="(prefers-color-scheme: dark)" name="theme-color"/>
+    <meta content="light dark" name="color-scheme"/>
+    <meta name="darkreader-lock"/>
+    <title>抖音视频自动监控下载工具</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html, body {
+        font-size: 16px;
+        color-scheme: light dark;
+        overflow-x: hidden;
+      }
+
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        word-wrap: break-word;
+        word-break: break-word;
+      }
+
+      #root {
+        min-height: 100vh;
+      }
+
+      /* 文本 padding */
+      .ant-table-cell {
+        padding: 12px 16px !important;
+      }
+
+      /* 修复 table 不居中的问题 */
+      .ant-table-expanded-row-fixed {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      /* 空表格时不显示奇怪的滚动条 */
+      .ant-table-placeholder .ant-table-expanded-row-fixed {
+        width: 100% !important;
+        position: relative !important;
+        left: 0 !important;
+      }
+
+      /* 悬停效果 */
+      .hoverable-row:hover td {
+        background-color: rgba(24, 144, 255, 0.08) !important;
+      }
+
+      /* 移动端适配 */
+      @media (max-width: 768px) {
+        html {
+          font-size: 14px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        html {
+          font-size: 13px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/src/main.tsx" type="module"></script>
+  </body>
+</html>

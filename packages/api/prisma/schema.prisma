@@ -1,0 +1,68 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "./generated"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Target {
+  id           String   @id @default(cuid())
+  name         String
+  sourceType   String
+  sourceConfig String   @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  videos       Video[]
+  jobRuns      JobRun[]
+}
+
+model Video {
+  id                String    @id @default(cuid())
+  targetId          String
+  target            Target    @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  platformId        String
+  title             String?
+  publishedAt       DateTime?
+  pageUrl           String?
+  coverUrl          String?
+  directDownloadUrl String?   @db.Text
+  localPath         String?
+  authorName        String?
+  authorId          String?
+  createdAt         DateTime  @default(now())
+
+  @@unique([targetId, platformId])
+}
+
+model JobRun {
+  id         String    @id @default(cuid())
+  targetId   String
+  target     Target    @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  status     String
+  startedAt  DateTime?
+  finishedAt DateTime?
+  error      String?   @db.Text
+  createdAt  DateTime  @default(now())
+}
+
+model AppConfig {
+  id        String   @id @default("singleton")
+  settings  String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+model ProxyPool {
+  id           String    @id @default(cuid())
+  url          String    @unique
+  protocol     String
+  latency      Int?
+  lastChecked  DateTime?
+  isValid      Boolean   @default(true)
+  failCount    Int       @default(0)
+  successCount Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
