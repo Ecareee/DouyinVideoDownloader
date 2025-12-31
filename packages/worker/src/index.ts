@@ -202,15 +202,18 @@ const worker = new Worker<JobData>(
       let downloaded = 0;
 
       for (const v of items) {
-        const stillExists = await prisma.target.findUnique({ where: { id: targetId } });
-        if (!stillExists) {
-          log('目标已被删除，停止处理', { targetId });
-          return;
-        }
+        if (!await prisma.target.findUnique({ where: { id: targetId } })) return;
 
         try {
-          const created = await prisma.video.create({
-            data: {
+          // 使用 upsert 避免重复插入错误
+          const video = await prisma.video.upsert({
+            where: {
+              targetId_platformId: {
+                targetId: target.id,
+                platformId: v.platformId
+              }
+            },
+            create: {
               targetId: target.id,
               platformId: v.platformId,
               title: v.title,
@@ -220,30 +223,25 @@ const worker = new Worker<JobData>(
               directDownloadUrl: v.directDownloadUrl,
               authorName: v.authorName,
               authorId: v.authorId
+            },
+            update: {
+              title: v.title,
+              directDownloadUrl: v.directDownloadUrl
             }
           });
-          inserted += 1;
 
-          if (created.directDownloadUrl) {
+          if (!video.localPath && video.directDownloadUrl) {
             const localPath = await downloadVideo(v, target.id, settings);
             if (localPath) {
-              await prisma.video.update({
-                where: { id: created.id },
-                data: { localPath }
-              });
-              downloaded += 1;
+              await prisma.video.update({ where: { id: video.id }, data: { localPath } });
+              downloaded++;
             }
           }
+
+          const isNew = Date.now() - new Date(video.createdAt).getTime() < 5000;
+          if (isNew) inserted++;
         } catch (err: any) {
-          try {
-            await prisma.jobRun.update({
-              where: { id: runId },
-              data: { status: 'failed', finishedAt: new Date(), error: err?.message ?? String(err) }
-            });
-          } catch {
-          }
-          log('任务执行失败', { targetId, error: err?.message ?? String(err) });
-          throw new Error(err?.message ?? '任务执行失败');
+          console.error(`[worker] 处理视频失败: ${v.platformId}`, err.message);
         }
       }
 
