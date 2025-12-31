@@ -1,4 +1,5 @@
 export type SourceType = 'http_json' | 'douyin';
+export type NotifyType = 'none' | 'email' | 'wxpusher' | 'bark';
 
 export interface Target {
   id: string;
@@ -76,6 +77,26 @@ export interface AppSettings {
   proxyAutoFetch: boolean;
   proxyFetchInterval: number;
   proxyRotateStrategy: 'random' | 'round-robin' | 'least-used';
+
+  // 通知设置
+  notifyEnabled: boolean;
+  notifyType: NotifyType;
+  notifyOnSuccess: boolean;
+  notifyOnFail: boolean;
+
+  // 邮箱配置
+  emailSmtpHost: string;
+  emailSmtpPort: number;
+  emailSmtpUser: string;
+  emailSmtpPass: string;
+  emailTo: string;
+
+  // WxPusher 配置
+  wxpusherAppToken: string;
+  wxpusherUid: string;
+
+  // Bark 配置
+  barkUrl: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -100,7 +121,27 @@ export const DEFAULT_SETTINGS: AppSettings = {
   proxyEnabled: false,
   proxyAutoFetch: false,
   proxyFetchInterval: 30,
-  proxyRotateStrategy: 'random'
+  proxyRotateStrategy: 'random',
+
+  // 通知设置
+  notifyEnabled: false,
+  notifyType: 'none',
+  notifyOnSuccess: true,
+  notifyOnFail: true,
+
+  // 邮箱配置
+  emailSmtpHost: '',
+  emailSmtpPort: 465,
+  emailSmtpUser: '',
+  emailSmtpPass: '',
+  emailTo: '',
+
+  // WxPusher 配置
+  wxpusherAppToken: '',
+  wxpusherUid: '',
+
+  // Bark 配置
+  barkUrl: ''
 };
 
 export interface ApiResponse<T> {

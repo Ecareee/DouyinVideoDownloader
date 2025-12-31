@@ -12,6 +12,7 @@ import { env } from './env.js';
 import { WsLogHub } from './wsLogHub.js';
 import { type AppSettings, DEFAULT_SETTINGS } from '@pkg/shared';
 import { createServer as createViteServer } from 'vite';
+import { Notifier } from '@pkg/worker/src/notifier.js';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -511,6 +512,49 @@ async function main() {
   app.delete('/api/proxies/:id', async (req, res) => {
     try {
       await prisma.proxyPool.delete({ where: { id: req.params.id } });
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/test-notify', async (_req, res) => {
+    try {
+      const settings = await getSettings();
+
+      if (!settings.notifyEnabled || settings.notifyType === 'none') {
+        return res.status(400).json({ error: '通知未启用' });
+      }
+
+      const resp = await fetch('http://localhost:2012/api/send-test-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || '发送失败');
+      }
+
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/send-test-notify', async (req, res) => {
+    try {
+      const settings = req.body as AppSettings;
+
+      const notifier = new Notifier(settings);
+
+      await notifier.send({
+        title: '测试通知',
+        content: `这是一条测试消息\n时间：${new Date().toLocaleString('zh-CN')}\n如果你收到此消息，说明通知配置正确`,
+        type: 'success'
+      });
+
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

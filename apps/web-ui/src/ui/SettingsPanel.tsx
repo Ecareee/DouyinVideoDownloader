@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Button,
   Card,
+  Checkbox,
   Divider,
   Flex,
   Input,
@@ -14,8 +15,8 @@ import {
   Tabs,
   Typography
 } from 'antd';
-import { ClearOutlined, ReloadOutlined } from '@ant-design/icons';
-import type { AppSettings } from '@pkg/shared';
+import { ClearOutlined, ReloadOutlined, SendOutlined } from '@ant-design/icons';
+import type { AppSettings, NotifyType } from '@pkg/shared';
 import { DEFAULT_SETTINGS } from '@pkg/shared';
 import { apiGet, apiPost, apiPut } from '../api';
 
@@ -23,6 +24,16 @@ interface Props {
   toast: any;
   onSettingsChange?: (settings: AppSettings) => void;
 }
+
+type NotifyErrors = {
+  emailSmtpHost?: string;
+  emailSmtpUser?: string;
+  emailSmtpPass?: string;
+  emailTo?: string;
+  wxpusherAppToken?: string;
+  wxpusherUid?: string;
+  barkUrl?: string;
+};
 
 function debounce<T extends (...args: any[]) => void>(fn: T, wait = 300) {
   let t: ReturnType<typeof setTimeout> | null = null;
@@ -35,15 +46,20 @@ function debounce<T extends (...args: any[]) => void>(fn: T, wait = 300) {
   };
 }
 
-function SettingItem({ label, description, children }: {
+function SettingItem({ label, description, required, error, children }: {
   label: string;
-  description?: string;
+  description?: React.ReactNode;
+  required?: boolean;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ marginBottom: 8 }}>
-        <Typography.Text strong>{label}</Typography.Text>
+        <Typography.Text strong>
+          {required && <span style={{ color: '#ff4d4f', marginRight: 4 }}>*</span>}
+          {label}
+        </Typography.Text>
         {description && (
           <Typography.Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
             {description}
@@ -51,6 +67,11 @@ function SettingItem({ label, description, children }: {
         )}
       </div>
       {children}
+      {error && (
+        <Typography.Text type="danger" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+          {error}
+        </Typography.Text>
+      )}
     </div>
   );
 }
@@ -59,6 +80,8 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [cleaning, setCleaning] = useState(false);
+  const [testingNotify, setTestingNotify] = useState(false);
+  const [notifyErrors, setNotifyErrors] = useState<NotifyErrors>({});
   const saveRef = useRef<((s: Partial<AppSettings>) => void) | null>(null);
 
   useEffect(() => {
@@ -66,9 +89,9 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
       try {
         const updated = await apiPut<AppSettings>('/api/settings', newSettings);
         setSettings((prev) => {
-          const merged = { ...prev, ...updated };
-          onSettingsChange?.(merged);
-          return merged;
+          const result = { ...prev, ...updated };
+          onSettingsChange?.(result);
+          return result;
         });
         toast.success('设置已保存');
       } catch (e: any) {
@@ -96,6 +119,10 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
   const updateField = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
     saveRef.current?.({ [key]: value });
+
+    if (key in notifyErrors) {
+      setNotifyErrors((prev) => ({ ...prev, [key]: undefined }));
+    }
   };
 
   const handleCleanupJobs = async () => {
@@ -121,6 +148,41 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
     }
   };
 
+  const validateNotifyConfig = (): boolean => {
+    const errors: NotifyErrors = {};
+
+    if (settings.notifyType === 'email') {
+      if (!settings.emailSmtpHost) errors.emailSmtpHost = '请输入 SMTP 服务器';
+      if (!settings.emailSmtpUser) errors.emailSmtpUser = '请输入发件人账号';
+      if (!settings.emailSmtpPass) errors.emailSmtpPass = '请输入发件人密码';
+      if (!settings.emailTo) errors.emailTo = '请输入收件人邮箱';
+    } else if (settings.notifyType === 'wxpusher') {
+      if (!settings.wxpusherAppToken) errors.wxpusherAppToken = '请输入 AppToken';
+      if (!settings.wxpusherUid) errors.wxpusherUid = '请输入用户 UID';
+    } else if (settings.notifyType === 'bark') {
+      if (!settings.barkUrl) errors.barkUrl = '请输入 Bark 推送地址';
+    }
+
+    setNotifyErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleTestNotify = async () => {
+    if (!validateNotifyConfig()) {
+      return;
+    }
+
+    setTestingNotify(true);
+    try {
+      await apiPost('/api/test-notify', {});
+      toast.success('测试通知已发送，请检查是否收到');
+    } catch (e: any) {
+      toast.error('发送失败：' + e.message);
+    } finally {
+      setTestingNotify(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: 100 }}>
@@ -128,6 +190,8 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
       </div>
     );
   }
+
+  const showNotifyDetails = settings.notifyEnabled && settings.notifyType !== 'none';
 
   const tabItems = [
     {
@@ -326,6 +390,193 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
               style={{ width: 200 }}
             />
           </SettingItem>
+        </Flex>
+      )
+    },
+    {
+      key: 'notify',
+      label: '通知设置',
+      children: (
+        <Flex vertical gap={0} style={{ padding: '16px' }}>
+          <SettingItem label="启用通知" description="当有新视频下载或任务失败时发送通知">
+            <Switch
+              checked={settings.notifyEnabled}
+              onChange={(v) => {
+                updateField('notifyEnabled', v);
+                setNotifyErrors({});
+              }}
+              checkedChildren="开"
+              unCheckedChildren="关"
+            />
+          </SettingItem>
+
+          {settings.notifyEnabled && (
+            <>
+              <SettingItem label="通知方式">
+                <Select
+                  value={settings.notifyType}
+                  onChange={(v) => {
+                    updateField('notifyType', v as NotifyType);
+                    setNotifyErrors({});
+                  }}
+                  options={[
+                    { label: '不通知', value: 'none' },
+                    { label: '邮件', value: 'email' },
+                    { label: 'WxPusher', value: 'wxpusher' },
+                    { label: 'Bark', value: 'bark' }
+                  ]}
+                  style={{ width: 200 }}
+                />
+              </SettingItem>
+
+              {showNotifyDetails && (
+                <>
+                  <SettingItem label="通知时机">
+                    <Flex vertical gap={8}>
+                      <Checkbox
+                        checked={settings.notifyOnSuccess}
+                        onChange={(e) => updateField('notifyOnSuccess', e.target.checked)}
+                      >
+                        下载成功时
+                      </Checkbox>
+                      <Checkbox
+                        checked={settings.notifyOnFail}
+                        onChange={(e) => updateField('notifyOnFail', e.target.checked)}
+                      >
+                        任务失败时
+                      </Checkbox>
+                    </Flex>
+                  </SettingItem>
+
+                  <Divider style={{ margin: '4px 0 16px' }}/>
+
+                  {settings.notifyType === 'email' && (
+                    <>
+                      <SettingItem label="SMTP 服务器" required error={notifyErrors.emailSmtpHost}>
+                        <Space size="middle">
+                          <Input
+                            value={settings.emailSmtpHost}
+                            onChange={(e) => updateField('emailSmtpHost', e.target.value)}
+                            placeholder="请输入 SMTP 服务器"
+                            style={{ width: 200 }}
+                            status={notifyErrors.emailSmtpHost ? 'error' : undefined}
+                          />
+                          <InputNumber
+                            value={settings.emailSmtpPort}
+                            onChange={(v) => updateField('emailSmtpPort', v || 465)}
+                            min={1}
+                            max={65535}
+                            placeholder="请输入端口"
+                            style={{ width: 100 }}
+                          />
+                        </Space>
+                      </SettingItem>
+
+                      <SettingItem label="发件人账号" description="SMTP 登录用户名" required
+                                   error={notifyErrors.emailSmtpUser}>
+                        <Input
+                          value={settings.emailSmtpUser}
+                          onChange={(e) => updateField('emailSmtpUser', e.target.value)}
+                          placeholder="请输入发件人账号"
+                          style={{ maxWidth: 300 }}
+                          status={notifyErrors.emailSmtpUser ? 'error' : undefined}
+                        />
+                      </SettingItem>
+
+                      <SettingItem label="发件人密码" description="SMTP 授权码" required
+                                   error={notifyErrors.emailSmtpPass}>
+                        <Input.Password
+                          value={settings.emailSmtpPass}
+                          onChange={(e) => updateField('emailSmtpPass', e.target.value)}
+                          placeholder="请输入发件人密码"
+                          style={{ maxWidth: 300 }}
+                          status={notifyErrors.emailSmtpPass ? 'error' : undefined}
+                        />
+                      </SettingItem>
+
+                      <SettingItem label="收件人邮箱" required error={notifyErrors.emailTo}>
+                        <Input
+                          value={settings.emailTo}
+                          onChange={(e) => updateField('emailTo', e.target.value)}
+                          placeholder="receive@example.com"
+                          style={{ maxWidth: 300 }}
+                          status={notifyErrors.emailTo ? 'error' : undefined}
+                        />
+                      </SettingItem>
+                    </>
+                  )}
+
+                  {settings.notifyType === 'wxpusher' && (
+                    <>
+                      <SettingItem
+                        label="AppToken"
+                        required
+                        error={notifyErrors.wxpusherAppToken}
+                        description={
+                          <>
+                            在{' '}
+                            <a href="https://wxpusher.zjiecode.com/admin/main/app/appToken" target="_blank"
+                               rel="noreferrer">
+                              WxPusher 后台
+                            </a>
+                            {' '}获取
+                          </>
+                        }
+                      >
+                        <Input.Password
+                          value={settings.wxpusherAppToken}
+                          onChange={(e) => updateField('wxpusherAppToken', e.target.value)}
+                          placeholder="AT_xxx"
+                          style={{ maxWidth: 400 }}
+                          status={notifyErrors.wxpusherAppToken ? 'error' : undefined}
+                        />
+                      </SettingItem>
+
+                      <SettingItem label="用户 UID" description="关注应用后获取的 UID" required
+                                   error={notifyErrors.wxpusherUid}>
+                        <Input
+                          value={settings.wxpusherUid}
+                          onChange={(e) => updateField('wxpusherUid', e.target.value)}
+                          placeholder="UID_xxx"
+                          style={{ maxWidth: 400 }}
+                          status={notifyErrors.wxpusherUid ? 'error' : undefined}
+                        />
+                      </SettingItem>
+                    </>
+                  )}
+
+                  {settings.notifyType === 'bark' && (
+                    <SettingItem
+                      label="Bark 推送地址"
+                      description="iOS Bark App 中复制的推送 URL"
+                      required
+                      error={notifyErrors.barkUrl}
+                    >
+                      <Input
+                        value={settings.barkUrl}
+                        onChange={(e) => updateField('barkUrl', e.target.value)}
+                        placeholder="https://api.day.app/YOUR_KEY/"
+                        style={{ maxWidth: 400 }}
+                        status={notifyErrors.barkUrl ? 'error' : undefined}
+                      />
+                    </SettingItem>
+                  )}
+
+                  <Divider style={{ margin: '4px 0 16px' }}/>
+
+                  <SettingItem label="测试通知" description="发送一条测试消息验证配置是否正确">
+                    <Button
+                      icon={<SendOutlined/>}
+                      onClick={handleTestNotify}
+                      loading={testingNotify}
+                    >
+                      发送测试通知
+                    </Button>
+                  </SettingItem>
+                </>
+              )}
+            </>
+          )}
         </Flex>
       )
     },

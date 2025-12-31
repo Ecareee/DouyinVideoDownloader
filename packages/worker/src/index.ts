@@ -8,6 +8,7 @@ import { connection, monitorQueue } from './queue.js';
 import { makeAdapter } from './adapters';
 import { downloadVideo, getJitteredDelay } from './downloader.js';
 import { proxyManager } from './proxyManager.js';
+import { createNotifyPayload, Notifier } from './notifier.js';
 import type { AppSettings } from '@pkg/shared';
 import { DEFAULT_SETTINGS } from '@pkg/shared';
 
@@ -128,6 +129,7 @@ const worker = new Worker<JobData>(
     }
 
     const settings = await getSettings();
+    const notifier = new Notifier(settings);
 
     proxyManager.configure(settings);
 
@@ -255,6 +257,10 @@ const worker = new Worker<JobData>(
 
       log('任务成功完成', { targetId, inserted, downloaded });
 
+      if (downloaded > 0) {
+        await notifier.send(createNotifyPayload('success', target.name, downloaded));
+      }
+
       await writeSnapshot();
     } catch (e: any) {
       try {
@@ -264,7 +270,11 @@ const worker = new Worker<JobData>(
         });
       } catch {
       }
+
       log('任务执行失败', { targetId, error: e?.message ?? String(e) });
+
+      await notifier.send(createNotifyPayload('fail', target.name, 0, e?.message));
+
       throw e;
     }
   },
