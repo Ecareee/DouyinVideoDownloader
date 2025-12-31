@@ -38,6 +38,7 @@ export function JobRunsPanel() {
     {
       title: '目标',
       key: 'target',
+      width: 120,
       sorter: (a: JobRunWithTarget, b: JobRunWithTarget) =>
         (a.target?.name || '').localeCompare(b.target?.name || ''),
       render: (_: any, record: JobRunWithTarget) => (
@@ -48,6 +49,7 @@ export function JobRunsPanel() {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 90,
       filters: [
         { text: '排队中', value: 'queued' },
         { text: '执行中', value: 'running' },
@@ -64,6 +66,7 @@ export function JobRunsPanel() {
       title: '开始时间',
       dataIndex: 'startedAt',
       key: 'startedAt',
+      width: 170,
       sorter: (a: JobRunWithTarget, b: JobRunWithTarget) =>
         new Date(a.startedAt || 0).getTime() - new Date(b.startedAt || 0).getTime(),
       render: (date: string) => (date ? new Date(date).toLocaleString('zh-CN') : '-')
@@ -72,7 +75,7 @@ export function JobRunsPanel() {
       title: '结束时间',
       dataIndex: 'finishedAt',
       key: 'finishedAt',
-      responsive: ['md'] as any,
+      width: 170,
       sorter: (a: JobRunWithTarget, b: JobRunWithTarget) =>
         new Date(a.finishedAt || 0).getTime() - new Date(b.finishedAt || 0).getTime(),
       render: (date: string) => (date ? new Date(date).toLocaleString('zh-CN') : '-')
@@ -81,7 +84,7 @@ export function JobRunsPanel() {
       title: '错误信息',
       dataIndex: 'error',
       key: 'error',
-      responsive: ['lg'] as any,
+      width: 200,
       render: (error: string) =>
         error ? (
           <Typography.Text type="danger" ellipsis style={{ maxWidth: 200 }}>
