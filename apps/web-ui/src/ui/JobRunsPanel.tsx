@@ -108,8 +108,8 @@ export function JobRunsPanel() {
         loading={loading}
         dataSource={runs}
         columns={columns}
-        pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
-        scroll={{ x: 'max-content' }}
+        pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
+        scroll={{ x: 750 }}
         rowClassName={() => 'hoverable-row'}
         size="middle"
         showSorterTooltip={false}

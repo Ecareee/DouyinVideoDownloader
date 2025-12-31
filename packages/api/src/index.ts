@@ -309,7 +309,7 @@ async function main() {
     try {
       const runs = await prisma.jobRun.findMany({
         orderBy: { createdAt: 'desc' },
-        take: 200,
+        take: 500,
         include: { target: { select: { name: true } } }
       });
       res.json(runs);
