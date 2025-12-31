@@ -47,6 +47,40 @@ async function getSettings(): Promise<AppSettings> {
   }
 }
 
+async function cleanupStuckJobs() {
+  try {
+    const stuckJobs = await prisma.jobRun.updateMany({
+      where: { status: 'running' },
+      data: { status: 'failed', finishedAt: new Date(), error: '服务重启，任务被中断' }
+    });
+    if (stuckJobs.count > 0) {
+      log(`清理了 ${stuckJobs.count} 个卡住的任务`);
+    }
+  } catch (e) {
+    console.error('[worker] 清理卡住任务失败：', e);
+  }
+}
+
+async function cleanupOldJobRuns() {
+  try {
+    const count = await prisma.jobRun.count();
+    if (count > 1000) {
+      const toDelete = count - 1000;
+      const oldRuns = await prisma.jobRun.findMany({
+        orderBy: { createdAt: 'asc' },
+        take: toDelete,
+        select: { id: true }
+      });
+      await prisma.jobRun.deleteMany({
+        where: { id: { in: oldRuns.map(r => r.id) } }
+      });
+      log(`清理了 ${toDelete} 条旧任务记录`);
+    }
+  } catch (e) {
+    console.error('[worker] 清理旧记录失败：', e);
+  }
+}
+
 async function ensureRepeatableJobs() {
   const targets = await prisma.target.findMany();
   const settings = await getSettings();
@@ -76,12 +110,20 @@ async function ensureRepeatableJobs() {
 
   const baseIntervalMs = settings.workerPollIntervalSeconds * 1000;
 
+  const now = new Date();
+  const nextMinute = new Date(now);
+  nextMinute.setSeconds(0, 0);
+  nextMinute.setMinutes(nextMinute.getMinutes() + 1);
+
   for (const t of targets) {
     const jitteredInterval = getJitteredDelay(baseIntervalMs, settings.checkIntervalJitter);
 
     await monitorQueue.upsertJobScheduler(
       `target:${t.id}`,
-      { every: Math.round(jitteredInterval) },
+      {
+        every: Math.round(jitteredInterval),
+        startDate: nextMinute // 对齐到整分钟
+      },
       {
         name: `target:${t.id}`,
         data: { targetId: t.id, reason: 'scheduled' }
@@ -92,7 +134,8 @@ async function ensureRepeatableJobs() {
   log('定时任务已设置', {
     targets: targets.length,
     baseIntervalSeconds: settings.workerPollIntervalSeconds,
-    jitterPercent: settings.checkIntervalJitter
+    jitterPercent: settings.checkIntervalJitter,
+    nextRun: nextMinute.toLocaleTimeString('zh-CN')
   });
 }
 
@@ -285,7 +328,14 @@ worker.on('failed', (job, err) => {
   log('任务失败', { jobId: job?.id, name: job?.name, error: err.message });
 });
 
+// 启动时的清理
+await cleanupStuckJobs();
+await cleanupOldJobRuns();
 await ensureRepeatableJobs();
+
+// 每小时清理一次旧记录
+setInterval(cleanupOldJobRuns, 60 * 60 * 1000);
+
 log('Worker 已启动', {
   concurrency: env.WORKER_CONCURRENCY,
   proxyStats: proxyManager.getStats()
