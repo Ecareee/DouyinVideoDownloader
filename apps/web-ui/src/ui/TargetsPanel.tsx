@@ -144,6 +144,7 @@ export function TargetsPanel({ toast }: Props) {
       title: '名称',
       dataIndex: 'name',
       key: 'name',
+      width: 120,
       sorter: (a: Target, b: Target) => a.name.localeCompare(b.name),
       render: (name: string) => <Typography.Text strong>{name}</Typography.Text>
     },
@@ -151,6 +152,7 @@ export function TargetsPanel({ toast }: Props) {
       title: '类型',
       dataIndex: 'sourceType',
       key: 'sourceType',
+      width: 100,
       sorter: (a: Target, b: Target) => a.sourceType.localeCompare(b.sourceType),
       filters: [
         { text: '抖音', value: 'douyin' },
@@ -173,29 +175,33 @@ export function TargetsPanel({ toast }: Props) {
       title: '配置信息',
       dataIndex: 'sourceConfig',
       key: 'sourceConfig',
-      responsive: ['md'] as any,
+      width: 280,
       render: (config: string, record: Target) => {
         const cfg = parseConfig(config);
         if (record.sourceType === 'douyin') {
           return (
             <Flex vertical gap={0}>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                用户ID：{cfg.secUserId?.slice(0, 20)}...
+              <Typography.Text type="secondary" style={{ fontSize: 12 }} copyable={{ text: cfg.secUserId }}>
+                用户ID：{cfg.secUserId}
               </Typography.Text>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                页数：{cfg.maxPages || 3} | Cookie: {cfg.cookie ? '已配置' : '未配置'}
+                Cookie: {cfg.cookie ? '已配置' : '未配置'}
               </Typography.Text>
             </Flex>
           );
         }
-        return <Typography.Text type="secondary">{config.slice(0, 50)}...</Typography.Text>;
+        return (
+          <Typography.Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+            {cfg.url}
+          </Typography.Text>
+        );
       }
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      responsive: ['lg'] as any,
+      width: 170,
       sorter: (a: Target, b: Target) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       render: (date: string) => new Date(date).toLocaleString('zh-CN')
@@ -204,6 +210,7 @@ export function TargetsPanel({ toast }: Props) {
       title: '更新时间',
       dataIndex: 'updatedAt',
       key: 'updatedAt',
+      width: 170,
       sorter: (a: Target, b: Target) =>
         new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
       defaultSortOrder: 'descend' as const,
@@ -213,9 +220,9 @@ export function TargetsPanel({ toast }: Props) {
       title: '操作',
       key: 'actions',
       fixed: 'right' as const,
-      width: 140,
+      width: 120,
       render: (_: any, record: Target) => (
-        <Flex gap={4} wrap="wrap">
+        <Flex gap={4}>
           <Tooltip title="立即执行">
             <Button
               type="primary"
@@ -262,7 +269,7 @@ export function TargetsPanel({ toast }: Props) {
         dataSource={targets}
         columns={columns}
         pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 900 }}
         rowClassName={() => 'hoverable-row'}
         size="middle"
         showSorterTooltip={false}
