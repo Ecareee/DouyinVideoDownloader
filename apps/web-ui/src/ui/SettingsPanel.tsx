@@ -333,8 +333,6 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
             <Switch
               checked={settings.userAgentRotation}
               onChange={(v) => updateField('userAgentRotation', v)}
-              checkedChildren="开"
-              unCheckedChildren="关"
             />
           </SettingItem>
 
@@ -354,8 +352,6 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
             <Switch
               checked={settings.proxyEnabled}
               onChange={(v) => updateField('proxyEnabled', v)}
-              checkedChildren="开"
-              unCheckedChildren="关"
             />
           </SettingItem>
 
@@ -363,8 +359,6 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
             <Switch
               checked={settings.proxyAutoFetch}
               onChange={(v) => updateField('proxyAutoFetch', v)}
-              checkedChildren="开"
-              unCheckedChildren="关"
             />
           </SettingItem>
 
@@ -405,8 +399,6 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
                 updateField('notifyEnabled', v);
                 setNotifyErrors({});
               }}
-              checkedChildren="开"
-              unCheckedChildren="关"
             />
           </SettingItem>
 

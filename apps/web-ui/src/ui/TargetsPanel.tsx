@@ -348,7 +348,7 @@ export function TargetsPanel({ toast }: Props) {
                 }
                 valuePropName="checked"
               >
-                <Switch checkedChildren="开" unCheckedChildren="关"/>
+                <Switch/>
               </Form.Item>
             </>
           )}
