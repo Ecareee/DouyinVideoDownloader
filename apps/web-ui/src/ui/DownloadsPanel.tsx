@@ -1,21 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Card, Col, Flex, Row, Statistic, Table, Tag, Typography } from 'antd';
 import { DownloadOutlined, FolderOpenOutlined, ReloadOutlined } from '@ant-design/icons';
-import { apiGet } from '../api';
-
-interface DownloadFile {
-  name: string;
-  path: string;
-  size: number;
-  createdAt: string;
-  targetId?: string;
-}
-
-interface DownloadsResponse {
-  files: DownloadFile[];
-  totalSize: number;
-  downloadDir: string;
-}
+import { type FileInfo, filesApi, type FilesResponse } from '../api';
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -26,13 +12,13 @@ function formatFileSize(bytes: number): string {
 }
 
 export function DownloadsPanel() {
-  const [data, setData] = useState<DownloadsResponse | null>(null);
+  const [data, setData] = useState<FilesResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function refresh() {
     setLoading(true);
     try {
-      const resp = await apiGet<DownloadsResponse>('/api/downloads');
+      const resp = await filesApi.list();
       setData(resp);
     } catch (e) {
       console.error('获取下载列表失败:', e);
@@ -55,7 +41,7 @@ export function DownloadsPanel() {
       key: 'name',
       width: 200,
       ellipsis: true,
-      sorter: (a: DownloadFile, b: DownloadFile) => a.name.localeCompare(b.name),
+      sorter: (a: FileInfo, b: FileInfo) => a.name.localeCompare(b.name),
       defaultSortOrder: 'descend' as const,
       render: (name: string) => (
         <Typography.Text ellipsis={{ tooltip: name }} style={{ maxWidth: 200 }}>
@@ -69,7 +55,7 @@ export function DownloadsPanel() {
       key: 'targetId',
       width: 200,
       ellipsis: true,
-      sorter: (a: DownloadFile, b: DownloadFile) => (a.targetId || '').localeCompare(b.targetId || ''),
+      sorter: (a: FileInfo, b: FileInfo) => (a.targetId || '').localeCompare(b.targetId || ''),
       render: (id: string) => (
         <Typography.Text ellipsis={{ tooltip: id }}>{id}</Typography.Text>
       )
@@ -79,7 +65,7 @@ export function DownloadsPanel() {
       dataIndex: 'size',
       key: 'size',
       width: 100,
-      sorter: (a: DownloadFile, b: DownloadFile) => a.size - b.size,
+      sorter: (a: FileInfo, b: FileInfo) => a.size - b.size,
       render: (size: number) => <Tag>{formatFileSize(size)}</Tag>
     },
     {
@@ -87,7 +73,7 @@ export function DownloadsPanel() {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 150,
-      sorter: (a: DownloadFile, b: DownloadFile) =>
+      sorter: (a: FileInfo, b: FileInfo) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       render: (date: string) => (
         <span style={{ whiteSpace: 'nowrap' }}>
@@ -100,11 +86,11 @@ export function DownloadsPanel() {
       key: 'actions',
       width: 80,
       fixed: 'right' as const,
-      render: (_: any, record: DownloadFile) => (
+      render: (_: any, record: FileInfo) => (
         <Button
           type="link"
           icon={<DownloadOutlined/>}
-          href={`/api/download-file?path=${encodeURIComponent(record.path)}`}
+          href={filesApi.getDownloadUrl(record.path)}
           target="_blank"
           size="small"
         >
@@ -115,7 +101,6 @@ export function DownloadsPanel() {
   ];
 
   return (
-    // 添加 overflowX: 'hidden'，切除多余负边距，避免移动端滚动条
     <Flex vertical gap={16} style={{ width: '100%', overflowX: 'hidden' }}>
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8} style={{ minWidth: 0 }}>
@@ -128,7 +113,6 @@ export function DownloadsPanel() {
             />
           </Card>
         </Col>
-
         <Col xs={24} sm={8} style={{ minWidth: 0 }}>
           <Card size="small" style={{ width: '100%', height: '100%' }}>
             <Statistic
@@ -138,20 +122,13 @@ export function DownloadsPanel() {
             />
           </Card>
         </Col>
-
         <Col xs={24} sm={8} style={{ minWidth: 0 }}>
           <Card size="small" style={{ width: '100%', height: '100%' }}>
             <Statistic
               title="存储路径"
               value={data?.downloadDir || './downloads'}
-              // 使用 formatter 解决该 card 宽度不一致问题
               formatter={(value) => (
-                <div style={{
-                  wordBreak: 'break-all',
-                  whiteSpace: 'normal',
-                  fontSize: 14,
-                  width: '100%'
-                }}>
+                <div style={{ wordBreak: 'break-all', whiteSpace: 'normal', fontSize: 14, width: '100%' }}>
                   {value}
                 </div>
               )}

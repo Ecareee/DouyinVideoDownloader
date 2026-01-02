@@ -22,7 +22,7 @@ const lastRunTime = new Map<string, number>();
 // 发送日志到 api，通过 websocket 广播
 async function sendLogToApi(level: 'info' | 'warn' | 'error', msg: string, meta?: Record<string, unknown>) {
   try {
-    await fetch(`${API_URL}/api/log`, {
+    await fetch(`${API_URL}/api/logs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ level, msg, meta })

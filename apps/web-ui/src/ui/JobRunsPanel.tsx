@@ -1,21 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Flex, Table, Tag, Typography } from 'antd';
-import type { JobRun } from '@pkg/shared';
-import { apiGet } from '../api';
-
-interface JobRunWithTarget extends JobRun {
-  target?: { name: string };
-}
+import { type JobRunWithTarget, jobsApi } from '../api';
 
 export function JobRunsPanel() {
-  const [runs, setRuns] = useState<JobRunWithTarget[]>([]);
+  const [jobs, setJobs] = useState<JobRunWithTarget[]>([]);
   const [loading, setLoading] = useState(false);
 
   async function refresh() {
     setLoading(true);
     try {
-      const r = await apiGet<JobRunWithTarget[]>('/api/job-runs');
-      setRuns(r);
+      const data = await jobsApi.list();
+      setJobs(data);
     } finally {
       setLoading(false);
     }
@@ -23,8 +18,8 @@ export function JobRunsPanel() {
 
   useEffect(() => {
     refresh();
-    const t = setInterval(refresh, 3000);
-    return () => clearInterval(t);
+    const timer = setInterval(refresh, 3000);
+    return () => clearInterval(timer);
   }, []);
 
   const statusMap: Record<string, { color: string; text: string }> = {
@@ -106,7 +101,7 @@ export function JobRunsPanel() {
       <Table
         rowKey="id"
         loading={loading}
-        dataSource={runs}
+        dataSource={jobs}
         columns={columns}
         pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
         scroll={{ x: 750 }}

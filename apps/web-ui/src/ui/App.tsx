@@ -19,7 +19,7 @@ import { DownloadsPanel } from './DownloadsPanel';
 import { LogProvider, useLogContext } from './LogContext';
 import type { AppSettings } from '@pkg/shared';
 import { DEFAULT_SETTINGS } from '@pkg/shared';
-import { apiGet } from '../api';
+import { settingsApi } from '../api';
 
 const { Header, Sider, Content } = Layout;
 
@@ -54,7 +54,7 @@ function AppLayout() {
 
   // 加载设置
   useEffect(() => {
-    apiGet<AppSettings>('/api/settings')
+    settingsApi.get()
       .then(setSettings)
       .catch(() => {
       });

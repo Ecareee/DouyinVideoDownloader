@@ -22,8 +22,8 @@ import {
   PlusOutlined,
   QuestionCircleOutlined
 } from '@ant-design/icons';
-import { getNextAlignedTime, SourceType, Target } from '@pkg/shared';
-import { apiDelete, apiGet, apiPost, apiPut } from '../api';
+import { getNextAlignedTime, type SourceType } from '@pkg/shared';
+import { settingsApi, type Target, targetsApi } from '../api';
 
 interface Props {
   toast: any;
@@ -70,8 +70,8 @@ export function TargetsPanel({ toast }: Props) {
   async function refresh() {
     setLoading(true);
     try {
-      const t = await apiGet<Target[]>('/api/targets');
-      setTargets(t);
+      const data = await targetsApi.list();
+      setTargets(data);
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export function TargetsPanel({ toast }: Props) {
   const openCreateModal = () => {
     setEditingTarget(null);
     form.resetFields();
-    form.setFieldsValue({ sourceType: 'douyin', maxPages: 3, headless: true });
+    form.setFieldsValue({ sourceType: 'douyin', headless: true });
     setSourceType('douyin');
     setOpen(true);
   };
@@ -123,11 +123,11 @@ export function TargetsPanel({ toast }: Props) {
       };
 
       if (editingTarget) {
-        await apiPut(`/api/targets/${editingTarget.id}`, payload);
+        await targetsApi.update(editingTarget.id, payload);
         toast.success('目标已更新');
       } else {
-        await apiPost<Target>('/api/targets', payload);
-        const settings = await apiGet<{ workerPollIntervalSeconds: number }>('/api/settings');
+        await targetsApi.create(payload);
+        const settings = await settingsApi.get();
         const intervalSeconds = settings.workerPollIntervalSeconds;
         const intervalMs = intervalSeconds * 1000;
         const nextTime = getNextAlignedTime(intervalMs);
@@ -149,15 +149,23 @@ export function TargetsPanel({ toast }: Props) {
     }
   }
 
-  async function del(id: string) {
-    await apiDelete(`/api/targets/${id}`);
-    toast.success('目标已删除');
-    await refresh();
+  async function handleDelete(id: string) {
+    try {
+      await targetsApi.delete(id);
+      toast.success('目标已删除');
+      await refresh();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
-  async function trigger(id: string) {
-    await apiPost(`/api/targets/${id}/trigger`, {});
-    toast.success('任务已触发');
+  async function handleTrigger(id: string) {
+    try {
+      await targetsApi.trigger(id);
+      toast.success('任务已触发');
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   const parseConfig = (config: string) => {
@@ -249,8 +257,7 @@ export function TargetsPanel({ toast }: Props) {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 170,
-      sorter: (a: Target, b: Target) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      sorter: (a: Target, b: Target) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       defaultSortOrder: 'descend' as const,
       render: (date: string) => new Date(date).toLocaleString('zh-CN')
     },
@@ -284,7 +291,7 @@ export function TargetsPanel({ toast }: Props) {
           <Popconfirm
             title="确定删除此目标？"
             description="相关的视频记录也会被删除"
-            onConfirm={() => del(record.id)}
+            onConfirm={() => handleDelete(record.id)}
             okText="删除"
             cancelText="取消"
           >

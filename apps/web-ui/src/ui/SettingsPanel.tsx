@@ -18,7 +18,7 @@ import {
 import { ClearOutlined, ReloadOutlined, SendOutlined } from '@ant-design/icons';
 import type { AppSettings, NotifyType } from '@pkg/shared';
 import { DEFAULT_SETTINGS } from '@pkg/shared';
-import { apiGet, apiPost, apiPut } from '../api';
+import { notificationsApi, schedulersApi, settingsApi } from '../api';
 
 interface Props {
   toast: any;
@@ -87,7 +87,7 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
   useEffect(() => {
     saveRef.current = debounce(async (newSettings: Partial<AppSettings>) => {
       try {
-        const updated = await apiPut<AppSettings>('/api/settings', newSettings);
+        const updated = await settingsApi.update(newSettings);
         setSettings((prev) => {
           const result = { ...prev, ...updated };
           onSettingsChange?.(result);
@@ -104,7 +104,7 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
     (async () => {
       setLoading(true);
       try {
-        const data = await apiGet<AppSettings>('/api/settings');
+        const data = await settingsApi.get();
         const merged = { ...DEFAULT_SETTINGS, ...data };
         setSettings(merged);
         onSettingsChange?.(merged);
@@ -119,7 +119,6 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
   const updateField = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
     saveRef.current?.({ [key]: value });
-
     if (key in notifyErrors) {
       setNotifyErrors((prev) => ({ ...prev, [key]: undefined }));
     }
@@ -128,7 +127,7 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
   const handleCleanupJobs = async () => {
     setCleaning(true);
     try {
-      const result = await apiPost<{ cleaned: number }>('/api/clear-all-jobs', {});
+      const result = await schedulersApi.clear();
       toast.success(`已清理 ${result.cleaned} 个定时任务，请重启 Worker 服务`);
     } catch (e: any) {
       toast.error('清理失败：' + e.message);
@@ -139,7 +138,7 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
 
   const handleResetSettings = async () => {
     try {
-      const updated = await apiPut<AppSettings>('/api/settings', DEFAULT_SETTINGS);
+      const updated = await settingsApi.reset();
       setSettings(updated);
       onSettingsChange?.(updated);
       toast.success('已重置为默认设置');
@@ -168,13 +167,10 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
   };
 
   const handleTestNotify = async () => {
-    if (!validateNotifyConfig()) {
-      return;
-    }
-
+    if (!validateNotifyConfig()) return;
     setTestingNotify(true);
     try {
-      await apiPost('/api/test-notify', {});
+      await notificationsApi.tests();
       toast.success('测试通知已发送，请检查是否收到');
     } catch (e: any) {
       toast.error('发送失败：' + e.message);
