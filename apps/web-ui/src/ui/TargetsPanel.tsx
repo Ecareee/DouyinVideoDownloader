@@ -15,6 +15,7 @@ import {
   Typography
 } from 'antd';
 import {
+  CopyOutlined,
   DeleteOutlined,
   EditOutlined,
   PlayCircleOutlined,
@@ -35,6 +36,36 @@ export function TargetsPanel({ toast }: Props) {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [sourceType, setSourceType] = useState<SourceType>('douyin');
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('已复制到剪贴板');
+    } catch {
+      toast.error('复制失败');
+    }
+  };
+
+  const CopyableTooltipContent = ({ text }: { text: string }) => (
+    <Flex align="flex-start" gap={8} style={{ maxWidth: 300 }}>
+      <span style={{ wordBreak: 'break-all', flex: 1 }}>{text}</span>
+      <Button
+        type="text"
+        size="small"
+        icon={<CopyOutlined/>}
+        onClick={(e) => {
+          e.stopPropagation();
+          copyToClipboard(text);
+        }}
+        style={{
+          color: 'rgba(255,255,255,0.85)',
+          minWidth: 24,
+          padding: '0 4px',
+          height: 22
+        }}
+      />
+    </Flex>
+  );
 
   async function refresh() {
     setLoading(true);
@@ -142,7 +173,7 @@ export function TargetsPanel({ toast }: Props) {
       title: '名称',
       dataIndex: 'name',
       key: 'name',
-      width: 120,
+      width: 100,
       sorter: (a: Target, b: Target) => a.name.localeCompare(b.name),
       render: (name: string) => <Typography.Text strong>{name}</Typography.Text>
     },
@@ -173,25 +204,43 @@ export function TargetsPanel({ toast }: Props) {
       title: '配置信息',
       dataIndex: 'sourceConfig',
       key: 'sourceConfig',
-      width: 280,
+      width: 250,
       render: (config: string, record: Target) => {
         const cfg = parseConfig(config);
         if (record.sourceType === 'douyin') {
           return (
-            <Flex vertical gap={0}>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }} copyable={{ text: cfg.secUserId }}>
-                用户ID：{cfg.secUserId}
-              </Typography.Text>
+            <Flex vertical gap={2}>
+              <Tooltip
+                title={<CopyableTooltipContent text={cfg.secUserId || ''}/>}
+                mouseLeaveDelay={0.3}
+              >
+                <Typography.Text
+                  type="secondary"
+                  style={{ fontSize: 12, cursor: 'pointer' }}
+                  ellipsis
+                >
+                  用户 ID：{cfg.secUserId}
+                </Typography.Text>
+              </Tooltip>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Cookie: {cfg.cookie ? '已配置' : '未配置'}
+                Cookie：{cfg.cookie ? '已配置' : '未配置'}
               </Typography.Text>
             </Flex>
           );
         }
         return (
-          <Typography.Text type="secondary" style={{ fontSize: 12 }} ellipsis>
-            {cfg.url}
-          </Typography.Text>
+          <Tooltip
+            title={<CopyableTooltipContent text={cfg.url || ''}/>}
+            mouseLeaveDelay={0.3}
+          >
+            <Typography.Text
+              type="secondary"
+              style={{ fontSize: 12, maxWidth: 180, display: 'block', cursor: 'pointer' }}
+              ellipsis
+            >
+              {cfg.url}
+            </Typography.Text>
+          </Tooltip>
         );
       }
     },
@@ -202,6 +251,7 @@ export function TargetsPanel({ toast }: Props) {
       width: 170,
       sorter: (a: Target, b: Target) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      defaultSortOrder: 'descend' as const,
       render: (date: string) => new Date(date).toLocaleString('zh-CN')
     },
     {
@@ -211,7 +261,6 @@ export function TargetsPanel({ toast }: Props) {
       width: 170,
       sorter: (a: Target, b: Target) =>
         new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
-      defaultSortOrder: 'descend' as const,
       render: (date: string) => new Date(date).toLocaleString('zh-CN')
     },
     {
@@ -286,7 +335,7 @@ export function TargetsPanel({ toast }: Props) {
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
-            <Input/>
+            <Input placeholder="请输入名称"/>
           </Form.Item>
 
           <Form.Item name="sourceType" label="数据源类型" rules={[{ required: true }]}>
@@ -314,7 +363,7 @@ export function TargetsPanel({ toast }: Props) {
                 }
                 rules={[{ required: true, message: '请输入用户 ID' }]}
               >
-                <Input/>
+                <Input placeholder="请输入用户 ID"/>
               </Form.Item>
 
               <Form.Item
