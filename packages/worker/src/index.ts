@@ -6,11 +6,10 @@ import fs from 'node:fs';
 import { env } from './env.js';
 import { connection, monitorQueue } from './queue.js';
 import { makeAdapter } from './adapters';
-import { downloadVideo, getJitteredDelay } from './downloader.js';
+import { downloadVideo } from './downloader.js';
 import { proxyManager } from './proxyManager.js';
 import { createNotifyPayload, Notifier } from './notifier.js';
-import type { AppSettings } from '@pkg/shared';
-import { DEFAULT_SETTINGS } from '@pkg/shared';
+import { AppSettings, DEFAULT_SETTINGS, getNextAlignedTime } from '@pkg/shared';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -108,21 +107,15 @@ async function ensureRepeatableJobs() {
     console.warn('[worker] 清理旧 repeatable jobs 失败:', e);
   }
 
-  const baseIntervalMs = settings.workerPollIntervalSeconds * 1000;
-
-  const now = new Date();
-  const nextMinute = new Date(now);
-  nextMinute.setSeconds(0, 0);
-  nextMinute.setMinutes(nextMinute.getMinutes() + 1);
+  const intervalMs = settings.workerPollIntervalSeconds * 1000;
+  const nextTime = getNextAlignedTime(intervalMs);
 
   for (const t of targets) {
-    const jitteredInterval = getJitteredDelay(baseIntervalMs, settings.checkIntervalJitter);
-
     await monitorQueue.upsertJobScheduler(
       `target:${t.id}`,
       {
-        every: Math.round(jitteredInterval),
-        startDate: nextMinute // 对齐到整分钟
+        every: intervalMs,
+        startDate: nextTime
       },
       {
         name: `target:${t.id}`,
@@ -135,7 +128,7 @@ async function ensureRepeatableJobs() {
     targets: targets.length,
     baseIntervalSeconds: settings.workerPollIntervalSeconds,
     jitterPercent: settings.checkIntervalJitter,
-    nextRun: nextMinute.toLocaleTimeString('zh-CN')
+    nextRun: nextTime.toLocaleTimeString('zh-CN')
   });
 }
 

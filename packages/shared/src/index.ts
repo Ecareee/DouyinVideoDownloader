@@ -155,3 +155,17 @@ export const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0'
 ];
+
+export function getNextAlignedTime(intervalMs: number): Date {
+  const now = Date.now();
+
+  // 获取当天 00:00:00 作为基准，所有执行时间都是「基准 + N × 间隔」
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const baseTime = todayStart.getTime();
+  const elapsed = now - baseTime;
+  const intervalsElapsed = Math.floor(elapsed / intervalMs);
+  const nextTime = baseTime + (intervalsElapsed + 1) * intervalMs;
+
+  return new Date(nextTime);
+}

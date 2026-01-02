@@ -21,7 +21,7 @@ import {
   PlusOutlined,
   QuestionCircleOutlined
 } from '@ant-design/icons';
-import type { SourceType, Target } from '@pkg/shared';
+import { getNextAlignedTime, SourceType, Target } from '@pkg/shared';
 import { apiDelete, apiGet, apiPost, apiPut } from '../api';
 
 interface Props {
@@ -97,19 +97,17 @@ export function TargetsPanel({ toast }: Props) {
       } else {
         await apiPost<Target>('/api/targets', payload);
         const settings = await apiGet<{ workerPollIntervalSeconds: number }>('/api/settings');
-        const intervalSec = settings.workerPollIntervalSeconds || 60;
+        const intervalSeconds = settings.workerPollIntervalSeconds;
+        const intervalMs = intervalSeconds * 1000;
+        const nextTime = getNextAlignedTime(intervalMs);
 
-        const now = new Date();
-        const nextMinute = new Date(now);
-        nextMinute.setSeconds(0, 0);
-        nextMinute.setMinutes(nextMinute.getMinutes() + 1);
-        const timeStr = nextMinute.toLocaleTimeString('zh-CN', {
+        const timeStr = nextTime.toLocaleTimeString('zh-CN', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit'
         });
 
-        toast.success(`目标已创建，将在 ${timeStr} 首次执行，之后每 ${intervalSec} 秒执行一次`);
+        toast.success(`目标已创建，将在 ${timeStr} 首次执行，之后每 ${intervalSeconds} 秒执行一次`);
       }
 
       setOpen(false);

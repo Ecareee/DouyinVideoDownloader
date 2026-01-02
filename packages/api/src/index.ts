@@ -10,7 +10,7 @@ import IORedis from 'ioredis';
 import { z } from 'zod';
 import { env } from './env.js';
 import { WsLogHub } from './wsLogHub.js';
-import { type AppSettings, DEFAULT_SETTINGS } from '@pkg/shared';
+import { type AppSettings, DEFAULT_SETTINGS, getNextAlignedTime } from '@pkg/shared';
 import { createServer as createViteServer } from 'vite';
 import { Notifier } from '@pkg/worker/src/notifier.js';
 
@@ -204,20 +204,15 @@ async function main() {
       const t = await prisma.target.create({ data });
       log('info', '目标已创建', { targetId: t.id, name: t.name, sourceType: t.sourceType });
 
-      // cron 表达式对齐
       const settings = await getSettings();
-      const intervalSeconds = settings.workerPollIntervalSeconds;
-
-      const now = new Date();
-      const nextMinute = new Date(now);
-      nextMinute.setSeconds(0, 0);
-      nextMinute.setMinutes(nextMinute.getMinutes() + 1);
+      const intervalMs = settings.workerPollIntervalSeconds * 1000;
+      const nextTime = getNextAlignedTime(intervalMs);
 
       await queue.upsertJobScheduler(
         `target:${t.id}`,
         {
-          every: intervalSeconds * 1000,
-          startDate: nextMinute
+          every: intervalMs,
+          startDate: nextTime
         },
         {
           name: `target:${t.id}`,
