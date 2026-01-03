@@ -72,7 +72,7 @@ export const settingsApi = {
 };
 
 export const notificationsApi = {
-  tests: () => api.post<{ ok: boolean }>('/notifications/tests')
+  test: () => api.post<{ ok: boolean }>('/notifications/test')
 };
 
 export const proxiesApi = {

@@ -170,7 +170,7 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
     if (!validateNotifyConfig()) return;
     setTestingNotify(true);
     try {
-      await notificationsApi.tests();
+      await notificationsApi.test();
       toast.success('测试通知已发送，请检查是否收到');
     } catch (e: any) {
       toast.error('发送失败：' + e.message);

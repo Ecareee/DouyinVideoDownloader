@@ -282,7 +282,7 @@ export function TargetsPanel({ toast }: Props) {
               type="primary"
               icon={<PlayCircleOutlined/>}
               size="small"
-              onClick={() => trigger(record.id)}
+              onClick={() => handleTrigger(record.id)}
             />
           </Tooltip>
           <Tooltip title="编辑">

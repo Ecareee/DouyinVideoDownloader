@@ -4,8 +4,8 @@ import { Notifier } from '@pkg/worker/src/notifier.js';
 
 export const notificationsRouter = Router();
 
-// POST /api/notifications/tests 测试通知
-notificationsRouter.post('/tests', async (_req, res) => {
+// POST /api/notifications/test 测试通知
+notificationsRouter.post('/test', async (_req, res) => {
   try {
     const settings = await getSettings();
 
