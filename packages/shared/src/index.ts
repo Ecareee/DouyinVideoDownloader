@@ -1,5 +1,5 @@
 export type SourceType = 'http_json' | 'douyin';
-export type NotifyType = 'none' | 'email' | 'wxpusher' | 'bark';
+export type NotifyType = 'none' | 'email' | 'wxpusher' | 'bark' | 'webhook' | 'telegram' | 'discord';
 
 export interface Target {
   id: string;
@@ -83,20 +83,24 @@ export interface AppSettings {
   notifyType: NotifyType;
   notifyOnSuccess: boolean;
   notifyOnFail: boolean;
-
-  // 邮箱配置
   emailSmtpHost: string;
   emailSmtpPort: number;
   emailSmtpUser: string;
   emailSmtpPass: string;
   emailTo: string;
-
-  // WxPusher 配置
   wxpusherAppToken: string;
   wxpusherUid: string;
-
-  // Bark 配置
   barkUrl: string;
+  webhookUrl: string;
+  webhookMethod: 'GET' | 'POST';
+  webhookHeaders: string;
+  webhookBodyTemplate: string;
+  telegramBotToken: string;
+  telegramChatId: string;
+  telegramProxy: string;
+  telegramApiUrl: string;
+  discordWebhookUrl: string;
+  discordProxy: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -128,20 +132,24 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notifyType: 'none',
   notifyOnSuccess: true,
   notifyOnFail: true,
-
-  // 邮箱配置
   emailSmtpHost: '',
   emailSmtpPort: 465,
   emailSmtpUser: '',
   emailSmtpPass: '',
   emailTo: '',
-
-  // WxPusher 配置
   wxpusherAppToken: '',
   wxpusherUid: '',
-
-  // Bark 配置
-  barkUrl: ''
+  barkUrl: '',
+  webhookUrl: '',
+  webhookMethod: 'POST',
+  webhookHeaders: '{}',
+  webhookBodyTemplate: '{"title": "{title}", "content": "{content}", "type": "{type}"}',
+  telegramBotToken: '',
+  telegramChatId: '',
+  telegramProxy: '',
+  telegramApiUrl: '',
+  discordWebhookUrl: '',
+  discordProxy: ''
 };
 
 export interface ApiResponse<T> {

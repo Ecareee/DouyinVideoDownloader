@@ -18,7 +18,7 @@ notificationsRouter.post('/test', async (_req, res) => {
       title: '测试通知',
       content: `这是一条测试消息\n时间：${new Date().toLocaleString('zh-CN')}\n如果你收到此消息，说明通知配置正确`,
       type: 'success'
-    });
+    }, true); // throwOnError = true
 
     res.json({ ok: true });
   } catch (e: any) {

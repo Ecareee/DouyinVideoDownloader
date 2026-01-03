@@ -33,6 +33,10 @@ type NotifyErrors = {
   wxpusherAppToken?: string;
   wxpusherUid?: string;
   barkUrl?: string;
+  webhookUrl?: string;
+  telegramBotToken?: string;
+  telegramChatId?: string;
+  discordWebhookUrl?: string;
 };
 
 function debounce<T extends (...args: any[]) => void>(fn: T, wait = 300) {
@@ -160,6 +164,13 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
       if (!settings.wxpusherUid) errors.wxpusherUid = '请输入用户 UID';
     } else if (settings.notifyType === 'bark') {
       if (!settings.barkUrl) errors.barkUrl = '请输入 Bark 推送地址';
+    } else if (settings.notifyType === 'webhook') {
+      if (!settings.webhookUrl) errors.webhookUrl = '请输入 Webhook URL';
+    } else if (settings.notifyType === 'telegram') {
+      if (!settings.telegramBotToken) errors.telegramBotToken = '请输入 Bot Token';
+      if (!settings.telegramChatId) errors.telegramChatId = '请输入 Chat ID';
+    } else if (settings.notifyType === 'discord') {
+      if (!settings.discordWebhookUrl) errors.discordWebhookUrl = '请输入 Discord Webhook URL';
     }
 
     setNotifyErrors(errors);
@@ -411,7 +422,10 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
                     { label: '不通知', value: 'none' },
                     { label: '邮件', value: 'email' },
                     { label: 'WxPusher', value: 'wxpusher' },
-                    { label: 'Bark', value: 'bark' }
+                    { label: 'Bark', value: 'bark' },
+                    { label: 'Webhook', value: 'webhook' },
+                    { label: 'Telegram', value: 'telegram' },
+                    { label: 'Discord', value: 'discord' }
                   ]}
                   style={{ width: 200 }}
                 />
@@ -548,6 +562,166 @@ export function SettingsPanel({ toast, onSettingsChange }: Props) {
                         status={notifyErrors.barkUrl ? 'error' : undefined}
                       />
                     </SettingItem>
+                  )}
+
+                  {settings.notifyType === 'webhook' && (
+                    <>
+                      <SettingItem
+                        label="Webhook URL"
+                        description="接收通知的 HTTP 地址"
+                        required
+                        error={notifyErrors.webhookUrl}
+                      >
+                        <Input
+                          value={settings.webhookUrl}
+                          onChange={(e) => updateField('webhookUrl', e.target.value)}
+                          placeholder="https://your-server.com/webhook"
+                          style={{ maxWidth: 500 }}
+                          status={notifyErrors.webhookUrl ? 'error' : undefined}
+                        />
+                      </SettingItem>
+
+                      <SettingItem label="请求方法">
+                        <Select
+                          value={settings.webhookMethod}
+                          onChange={(v) => updateField('webhookMethod', v)}
+                          options={[
+                            { label: 'POST', value: 'POST' },
+                            { label: 'GET', value: 'GET' }
+                          ]}
+                          style={{ width: 100 }}
+                        />
+                      </SettingItem>
+
+                      <SettingItem
+                        label="自定义 Headers"
+                        description="JSON 格式"
+                      >
+                        <Input.TextArea
+                          value={settings.webhookHeaders}
+                          onChange={(e) => updateField('webhookHeaders', e.target.value)}
+                          placeholder='{"Authorization": "Bearer xxx"}'
+                          rows={2}
+                          style={{ maxWidth: 500 }}
+                        />
+                      </SettingItem>
+
+                      <SettingItem
+                        label="Body 模板"
+                        description="可用变量：{title} 标题，{content} 内容，{type} 类型(success/fail)，{timestamp} 时间戳"
+                      >
+                        <Input.TextArea
+                          value={settings.webhookBodyTemplate}
+                          onChange={(e) => updateField('webhookBodyTemplate', e.target.value)}
+                          placeholder='{"title": "{title}", "content": "{content}", "type": "{type}"}'
+                          rows={3}
+                          style={{ maxWidth: 500 }}
+                        />
+                      </SettingItem>
+                    </>
+                  )}
+
+                  {settings.notifyType === 'telegram' && (
+                    <>
+                      <SettingItem
+                        label="Bot Token"
+                        description={
+                          <>
+                            通过{' '}
+                            <a href="https://t.me/BotFather" target="_blank" rel="noreferrer">
+                              @BotFather
+                            </a>
+                            {' '}创建 Bot 获取
+                          </>
+                        }
+                        required
+                        error={notifyErrors.telegramBotToken}
+                      >
+                        <Input.Password
+                          value={settings.telegramBotToken}
+                          onChange={(e) => updateField('telegramBotToken', e.target.value)}
+                          placeholder="123456789:xxxxxxxxx"
+                          style={{ maxWidth: 500 }}
+                          status={notifyErrors.telegramBotToken ? 'error' : undefined}
+                        />
+                      </SettingItem>
+
+                      <SettingItem
+                        label="Chat ID"
+                        description={
+                          <>
+                            个人聊天 ID 或群组/频道 ID，可通过{' '}
+                            <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer">
+                              @userinfobot
+                            </a>
+                            {' '}获取
+                          </>
+                        }
+                        required
+                        error={notifyErrors.telegramChatId}
+                      >
+                        <Input
+                          value={settings.telegramChatId}
+                          onChange={(e) => updateField('telegramChatId', e.target.value)}
+                          placeholder="123456789"
+                          style={{ maxWidth: 300 }}
+                          status={notifyErrors.telegramChatId ? 'error' : undefined}
+                        />
+                      </SettingItem>
+
+                      <SettingItem
+                        label="代理地址"
+                        description="中国大陆需要代理访问，支持 HTTP 和 SOCKS5"
+                      >
+                        <Input
+                          value={settings.telegramProxy}
+                          onChange={(e) => updateField('telegramProxy', e.target.value)}
+                          placeholder="请输入你的代理地址，如 http://127.0.0.1:10809"
+                          style={{ maxWidth: 400 }}
+                        />
+                      </SettingItem>
+
+                      <SettingItem
+                        label="API 反代地址"
+                        description="自建 Telegram API 反代，可用 Cloudflare Workers 免费部署，填写后无需再填代理"
+                      >
+                        <Input
+                          value={settings.telegramApiUrl}
+                          onChange={(e) => updateField('telegramApiUrl', e.target.value)}
+                          placeholder="https://your-tg-api.workers.dev"
+                          style={{ maxWidth: 300 }}
+                        />
+                      </SettingItem>
+                    </>
+                  )}
+
+                  {settings.notifyType === 'discord' && (
+                    <>
+                      <SettingItem
+                        label="Discord Webhook URL"
+                        description="在 Discord 频道设置 → 整合 → Webhook 中创建"
+                        required
+                        error={notifyErrors.discordWebhookUrl}
+                      >
+                        <Input
+                          value={settings.discordWebhookUrl}
+                          onChange={(e) => updateField('discordWebhookUrl', e.target.value)}
+                          placeholder="https://discord.com/api/webhooks/xxx/yyy"
+                          style={{ maxWidth: 500 }}
+                          status={notifyErrors.discordWebhookUrl ? 'error' : undefined}/>
+                      </SettingItem>
+
+                      <SettingItem
+                        label="代理地址"
+                        description="中国大陆需要代理访问 Discord，支持 HTTP 和 SOCKS5"
+                      >
+                        <Input
+                          value={settings.discordProxy}
+                          onChange={(e) => updateField('discordProxy', e.target.value)}
+                          placeholder="请输入你的代理地址，如 http://127.0.0.1:10809"
+                          style={{ maxWidth: 400 }}/>
+                      </SettingItem>
+                    </>
                   )}
 
                   <Divider style={{ margin: '4px 0 16px' }}/>
